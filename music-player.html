@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Music Player</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 30% 20%, #2b2f3a, #0c0d12 70%);
+    font-family: 'Courier New', Courier, monospace;
+    padding: 30px 10px;
+  }
+
+  .device {
+    width: 340px;
+    background: linear-gradient(160deg, #3a3d47, #1b1d24);
+    border-radius: 28px;
+    padding: 18px;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.05) inset,
+      0 25px 60px rgba(0,0,0,0.6);
+  }
+
+  .brand-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px 12px;
+    color: #9a9fae;
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+
+  /* LCD screen */
+  .lcd {
+    background: #1c2b1a;
+    border: 3px solid #0e150c;
+    border-radius: 8px;
+    padding: 14px 12px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.6) inset;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lcd-row {
+    color: #7dffb0;
+    text-shadow: 0 0 5px rgba(125,255,176,0.6);
+  }
+
+  .marquee-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+    height: 22px;
+    position: relative;
+    margin-bottom: 2px;
+  }
+  .marquee-track {
+    display: inline-block;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding-left: 100%;
+    animation: scrollTitle 9s linear infinite;
+  }
+  @keyframes scrollTitle {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .artist-line {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-bottom: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .time-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    opacity: 0.85;
+    margin-bottom: 6px;
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 6px;
+    background: #0e150c;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 0 4px rgba(0,0,0,0.5) inset;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #7dffb0;
+    border-radius: 4px;
+    box-shadow: 0 0 6px rgba(125,255,176,0.7);
+    transition: width 0.1s linear;
+  }
+
+  .eq {
+    position: absolute;
+    right: 10px;
+    top: 12px;
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 16px;
+  }
+  .eq span {
+    width: 3px;
+    background: #7dffb0;
+    box-shadow: 0 0 4px rgba(125,255,176,0.7);
+    animation: eqBounce 0.9s ease-in-out infinite;
+  }
+  .eq span:nth-child(1) { animation-delay: 0s; height: 40%; }
+  .eq span:nth-child(2) { animation-delay: 0.15s; height: 80%; }
+  .eq span:nth-child(3) { animation-delay: 0.3s; height: 55%; }
+  .eq span:nth-child(4) { animation-delay: 0.45s; height: 90%; }
+  @keyframes eqBounce {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+  .eq.paused span { animation-play-state: paused; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 18px 0 14px;
+  }
+  .ctrl-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(160deg, #4a4e5a, #24262e);
+    color: #d9dce3;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.4), 0 5px 10px rgba(0,0,0,0.35);
+    transition: transform 0.08s ease;
+  }
+  .ctrl-btn:active { transform: scale(0.9); }
+  .ctrl-btn.play {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+    background: linear-gradient(160deg, #7dffb0, #29c96f);
+    color: #0e1a10;
+  }
+  .ctrl-btn.toggle-on {
+    color: #7dffb0;
+    box-shadow: 0 0 0 2px rgba(125,255,176,0.5) inset, 0 3px 0 rgba(0,0,0,0.4);
+  }
+
+  .sub-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 4px;
+    margin-bottom: 14px;
+  }
+  .mini-btn {
+    background: none;
+    border: none;
+    color: #9a9fae;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  .mini-btn.toggle-on { color: #7dffb0; background: rgba(125,255,176,0.1); }
+
+  .volume-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px 6px;
+  }
+  .volume-row span { color: #9a9fae; font-size: 14px; }
+  input[type="range"] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    background: #0e150c;
+    border-radius: 4px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #7dffb0;
+    box-shadow: 0 0 5px rgba(125,255,176,0.7);
+    cursor: pointer;
+  }
+
+  /* Playlist */
+  .playlist {
+    margin-top: 14px;
+    background: #14151b;
+    border-radius: 10px;
+    padding: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .track-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 10px;
+    border-radius: 7px;
+    color: #b7bbc8;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .track-item:hover { background: #1f212a; }
+  .track-item.active {
+    background: rgba(125,255,176,0.12);
+    color: #7dffb0;
+  }
+  .track-item .t-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track-item .t-dur { opacity: 0.7; margin-left: 8px; flex-shrink: 0; }
+
+  .playlist::-webkit-scrollbar { width: 6px; }
+  .playlist::-webkit-scrollbar-thumb { background: #333644; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="brand-row">
+    <span>◆ RETRO PLAYER</span>
+    <span id="trackCount">01 / 05</span>
+  </div>
+
+  <div class="lcd">
+    <div class="eq paused" id="eq"><span></span><span></span><span></span><span></span></div>
+    <div class="marquee-wrap">
+      <div class="marquee-track" id="titleMarquee">Loading...</div>
+    </div>
+    <div class="artist-line" id="artistLine">—</div>
+    <div class="time-row">
+      <span id="curTime">0:00</span>
+      <span id="totalTime">0:00</span>
+    </div>
+    <div class="progress-track" id="progressTrack">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="prevBtn" title="Previous">⏮</button>
+    <button class="ctrl-btn play" id="playBtn" title="Play/Pause">▶</button>
+    <button class="ctrl-btn" id="nextBtn" title="Next">⏭</button>
+  </div>
+
+  <div class="sub-controls">
+    <button class="mini-btn toggle-on" id="autoplayBtn">⟳ Autoplay</button>
+    <button class="mini-btn" id="shuffleBtn">🔀 Shuffle</button>
+  </div>
+
+  <div class="volume-row">
+    <span>🔈</span>
+    <input type="range" id="volumeSlider" min="0" max="100" value="60">
+    <span id="volLabel">60</span>
+  </div>
+
+  <div class="playlist" id="playlist"></div>
+</div>
+
+<script>
+  // Because this is a sandboxed demo with no external audio files,
+  // each "song" is synthesized live with the Web Audio API — a short
+  // looping chiptune-style melody standing in for a real track, so every
+  // control (play, pause, seek, volume, next, previous, autoplay) is fully functional.
+
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.6;
+  masterGain.connect(audioCtx.destination);
+
+  const songs = [
+    { title: 'Neon Skyline', artist: 'Midnight Drifters', duration: 18, notes: [261.6,329.6,392.0,523.2,392.0,329.6] },
+    { title: '電子ラブソング (Electric Love Song)', artist: 'Sakura Static', duration: 16, notes: [293.6,349.2,440.0,349.2,293.6,220.0] },
+    { title: 'Analog Sunset', artist: 'Vinyl Ghosts', duration: 20, notes: [220.0,246.9,293.6,329.6,293.6,246.9] },
+    { title: 'Tape Deck Dreams', artist: 'The Cassette Kids', duration: 15, notes: [329.6,392.0,440.0,392.0,329.6,293.6] },
+    { title: 'Static & Stardust', artist: 'Lo-Fi Astronaut', duration: 22, notes: [246.9,293.6,349.2,440.0,349.2,293.6] }
+  ];
+
+  let currentIndex = 0;
+  let isPlaying = false;
+  let elapsed = 0;
+  let timerId = null;
+  let autoplay = true;
+  let shuffle = false;
+  let activeOscillators = [];
+  let noteTimeouts = [];
+
+  const titleMarquee = document.getElementById('titleMarquee');
+  const artistLine = document.getElementById('artistLine');
+  const curTimeEl = document.getElementById('curTime');
+  const totalTimeEl = document.getElementById('totalTime');
+  const progressFill = document.getElementById('progressFill');
+  const progressTrack = document.getElementById('progressTrack');
+  const playBtn = document.getElementById('playBtn');
+  const eqEl = document.getElementById('eq');
+  const trackCount = document.getElementById('trackCount');
+  const playlistEl = document.getElementById('playlist');
+  const autoplayBtn = document.getElementById('autoplayBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const volumeSlider = document.getElementById('volumeSlider');
+  const volLabel = document.getElementById('volLabel');
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  }
+
+  function renderPlaylist() {
+    playlistEl.innerHTML = '';
+    songs.forEach((song, i) => {
+      const item = document.createElement('div');
+      item.className = 'track-item' + (i === currentIndex ? ' active' : '');
+      item.innerHTML = `<span class="t-name">${i + 1}. ${song.title} — ${song.artist}</span><span class="t-dur">${formatTime(song.duration)}</span>`;
+      item.addEventListener('click', () => loadSong(i, true));
+      playlistEl.appendChild(item);
+    });
+  }
+
+  function stopMelody() {
+    activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
+    activeOscillators = [];
+    noteTimeouts.forEach(t => clearTimeout(t));
+    noteTimeouts = [];
+  }
+
+  function playNote(freq, startDelay, dur) {
+    const t = setTimeout(() => {
+      if (!isPlaying) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(masterGain);
+      const now = audioCtx.currentTime;
+      gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur - 0.05);
+      osc.start(now);
+      osc.stop(now + dur);
+      activeOscillators.push(osc);
+    }, startDelay * 1000);
+    noteTimeouts.push(t);
+  }
+
+  function scheduleMelody(song) {
+    stopMelody();
+    const noteDur = 0.8;
+    const loopLen = song.notes.length * noteDur;
+    const remaining = song.duration - elapsed;
+    const loops = Math.ceil(remaining / loopLen) + 1;
+    let offset = -(elapsed % loopLen);
+    for (let l = 0; l < loops; l++) {
+      song.notes.forEach((freq, idx) => {
+        const start = offset + l * loopLen + idx * noteDur;
+        if (start >= 0) playNote(freq, start, noteDur * 0.9);
+      });
+    }
+  }
+
+  function loadSong(index, autoStart) {
+    stopMelody();
+    currentIndex = index;
+    elapsed = 0;
+    const song = songs[currentIndex];
+    titleMarquee.textContent = song.title + '   •   ' + song.artist;
+    artistLine.textContent = song.artist;
+    totalTimeEl.textContent = formatTime(song.duration);
+    curTimeEl.textContent = '0:00';
+    progressFill.style.width = '0%';
+    trackCount.textContent = `${(currentIndex + 1).toString().padStart(2,'0')} / ${songs.length.toString().padStart(2,'0')}`;
+    renderPlaylist();
+    if (autoStart) {
+      play();
+    } else {
+      pause();
+    }
+  }
+
+  function play() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    isPlaying = true;
+    playBtn.textContent = '⏸';
+    eqEl.classList.remove('paused');
+    scheduleMelody(songs[currentIndex]);
+    if (timerId) clearInterval(timerId);
+    timerId = setInterval(tick, 200);
+  }
+
+  function pause() {
+    isPlaying = false;
+    playBtn.textContent = '▶';
+    eqEl.classList.add('paused');
+    stopMelody();
+    if (timerId) clearInterval(timerId);
+  }
+
+  function tick() {
+    elapsed += 0.2;
+    const song = songs[currentIndex];
+    if (elapsed >= song.duration) {
+      elapsed = song.duration;
+      curTimeEl.textContent = formatTime(elapsed);
+      progressFill.style.width = '100%';
+      handleTrackEnd();
+      return;
+    }
+    curTimeEl.textContent = formatTime(elapsed);
+    progressFill.style.width = (elapsed / song.duration * 100) + '%';
+  }
+
+  function handleTrackEnd() {
+    if (autoplay) {
+      nextTrack();
+    } else {
+      pause();
+      elapsed = 0;
+      progressFill.style.width = '0%';
+      curTimeEl.textContent = '0:00';
+    }
+  }
+
+  function nextTrack() {
+    let next;
+    if (shuffle) {
+      do { next = Math.floor(Math.random() * songs.length); } while (next === currentIndex && songs.length > 1);
+    } else {
+      next = (currentIndex + 1) % songs.length;
+    }
+    loadSong(next, true);
+  }
+
+  function prevTrack() {
+    if (elapsed > 3) {
+      loadSong(currentIndex, true);
+      return;
+    }
+    let prev = (currentIndex - 1 + songs.length) % songs.length;
+    loadSong(prev, true);
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (isPlaying) pause(); else { if (elapsed >= songs[currentIndex].duration) elapsed = 0; play(); }
+  });
+  document.getElementById('nextBtn').addEventListener('click', nextTrack);
+  document.getElementById('prevBtn').addEventListener('click', prevTrack);
+
+  progressTrack.addEventListener('click', (e) => {
+    const rect = progressTrack.getBoundingClientRect();
+    const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+    const song = songs[currentIndex];
+    elapsed = ratio * song.duration;
+    progressFill.style.width = (ratio * 100) + '%';
+    curTimeEl.textContent = formatTime(elapsed);
+    if (isPlaying) scheduleMelody(song);
+  });
+
+  autoplayBtn.addEventListener('click', () => {
+    autoplay = !autoplay;
+    autoplayBtn.classList.toggle('toggle-on', autoplay);
+  });
+
+  shuffleBtn.addEventListener('click', () => {
+    shuffle = !shuffle;
+    shuffleBtn.classList.toggle('toggle-on', shuffle);
+  });
+
+  volumeSlider.addEventListener('input', () => {
+    const v = parseInt(volumeSlider.value, 10);
+    volLabel.textContent = v;
+    masterGain.gain.value = v / 100;
+  });
+
+  loadSong(0, false);
+</script>
+
+</body>
+</html>
